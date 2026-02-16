@@ -1,0 +1,20 @@
+<div id="welcome-screen">
+    <h1>Meet Your AI Bestie</h1>
+    <input type="text" id="user-name" placeholder="Enter your name...">
+    <button onclick="startApp()">Enter Space</button>
+</div>
+
+<div id="main-app" class="hidden">
+    <div id="canvas-container"></div> <div class="selection-panel">
+        <button onclick="selectModel('model1.png')">Character A</button>
+        <button onclick="selectModel('model2.png')">Character B</button>
+    </div>
+
+    <div class="chat-container">
+        <div id="chat-log"></div>
+        <div class="input-area">
+            <input type="text" id="chat-input" placeholder="Say something...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+</div>
