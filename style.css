@@ -1,0 +1,48 @@
+:root {
+    --glass: rgba(255, 255, 255, 0.1);
+    --glow: #00f2fe;
+}
+
+body, html {
+    margin: 0; padding: 0; height: 100%; width: 100%;
+    background: radial-gradient(circle at top, #1e1e2f, #000);
+    color: white; font-family: 'Segoe UI', sans-serif; overflow: hidden;
+}
+
+.screen {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 100vw; height: 100vh; transition: opacity 0.5s;
+}
+
+.hidden { display: none !important; }
+
+.glass-card {
+    background: var(--glass);
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px; padding: 30px;
+    width: 85%; max-width: 450px; text-align: center;
+}
+
+#canvas-container { height: 45vh; width: 100%; cursor: grab; }
+
+.chat-wrapper { flex: 1; margin-bottom: 20px; display: flex; flex-direction: column; }
+
+#chat-log {
+    flex-grow: 1; overflow-y: auto; text-align: left;
+    margin-bottom: 10px; font-size: 0.9rem; padding-right: 10px;
+}
+
+.input-area { display: flex; gap: 10px; }
+
+input {
+    flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--glass);
+    color: white; padding: 10px; border-radius: 8px;
+}
+
+button {
+    background: var(--glow); border: none; padding: 10px 20px;
+    border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;
+}
+
+button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--glow); }
