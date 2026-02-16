@@ -1,0 +1,16 @@
+{
+  "name": "my-ai-bestie",
+  "version": "1.0.0",
+  "description": "A 3D AI companion powered by Gemini",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "@google/generative-ai": "^0.11.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
