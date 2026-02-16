@@ -1,20 +1,40 @@
-<div id="welcome-screen">
-    <h1>Meet Your AI Bestie</h1>
-    <input type="text" id="user-name" placeholder="Enter your name...">
-    <button onclick="startApp()">Enter Space</button>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Bestie 3D</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
 
-<div id="main-app" class="hidden">
-    <div id="canvas-container"></div> <div class="selection-panel">
-        <button onclick="selectModel('model1.png')">Character A</button>
-        <button onclick="selectModel('model2.png')">Character B</button>
-    </div>
-
-    <div class="chat-container">
-        <div id="chat-log"></div>
-        <div class="input-area">
-            <input type="text" id="chat-input" placeholder="Say something...">
-            <button onclick="sendMessage()">Send</button>
+    <div id="welcome-screen" class="screen">
+        <div class="glass-card">
+            <h1>AI Bestie Space</h1>
+            <p>Enter your name to begin the journey</p>
+            <input type="text" id="user-name" placeholder="Your Name...">
+            <button onclick="startApp()">Enter Space</button>
         </div>
     </div>
-</div>
+
+    <div id="main-app" class="screen hidden">
+        <div id="canvas-container"></div>
+        
+        <div class="model-picker">
+            <button onclick="changeModel('model1.png')">Aura</button>
+            <button onclick="changeModel('model2.png')">Nova</button>
+        </div>
+
+        <div class="chat-wrapper glass-card">
+            <div id="chat-log"></div>
+            <div class="input-area">
+                <input type="text" id="chat-input" placeholder="Say something..." onkeypress="if(event.key==='Enter') sendMessage()">
+                <button id="send-btn" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
