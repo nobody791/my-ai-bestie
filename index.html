@@ -2,39 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Bestie 3D</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>3D AI Friends - Your Virtual Companion</title>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <div id="welcome-screen" class="screen">
-        <div class="glass-card">
-            <h1>AI Bestie Space</h1>
-            <p>Enter your name to begin the journey</p>
-            <input type="text" id="user-name" placeholder="Your Name...">
-            <button onclick="startApp()">Enter Space</button>
-        </div>
-    </div>
-
-    <div id="main-app" class="screen hidden">
-        <div id="canvas-container"></div>
-        
-        <div class="model-picker">
-            <button onclick="changeModel('model1.png')">Aura</button>
-            <button onclick="changeModel('model2.png')">Nova</button>
-        </div>
-
-        <div class="chat-wrapper glass-card">
-            <div id="chat-log"></div>
-            <div class="input-area">
-                <input type="text" id="chat-input" placeholder="Say something..." onkeypress="if(event.key==='Enter') sendMessage()">
-                <button id="send-btn" onclick="sendMessage()">Send</button>
+    <!-- Name Input Modal -->
+    <div id="nameModal" class="modal active">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h1 class="gradient-text">Welcome to 3D AI Friends! ✨</h1>
+                <p>Enter your name to begin your journey</p>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="userNameInput" placeholder="Your name..." class="name-input">
+                <button id="startJourneyBtn" class="start-btn">Start Journey 🚀</button>
+            </div>
+            <div class="modal-footer">
+                <p class="hint">Your personal AI companion awaits!</p>
             </div>
         </div>
     </div>
 
+    <!-- Main App -->
+    <div id="mainApp" class="main-app">
+        <!-- Header -->
+        <header class="glass-header">
+            <div class="header-content">
+                <h1 class="logo">🤖 AI Friends</h1>
+                <div class="user-greeting" id="userGreeting"></div>
+            </div>
+        </header>
+
+        <!-- 3D Model Section -->
+        <section class="model-section">
+            <div class="model-container">
+                <div class="floating-model" id="floatingModel">
+                    <img src="public/model1.png" alt="Model 1" class="model-img" id="currentModel">
+                    <div class="glow-effect"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Friend Selection Section -->
+        <section class="friend-selection">
+            <h2 class="section-title">Choose Your Friend</h2>
+            <div class="friend-cards">
+                <div class="friend-card" data-model="model1" data-name="Luna">
+                    <div class="card-image">
+                        <img src="public/model1.png" alt="Friend 1">
+                    </div>
+                    <div class="card-content">
+                        <h3>Luna</h3>
+                        <p>Wise & Caring</p>
+                        <button class="select-friend-btn" data-model="model1">Select</button>
+                    </div>
+                </div>
+                <div class="friend-card" data-model="model2" data-name="Nova">
+                    <div class="card-image">
+                        <img src="public/model2.png" alt="Friend 2">
+                    </div>
+                    <div class="card-content">
+                        <h3>Nova</h3>
+                        <p>Energetic & Fun</p>
+                        <button class="select-friend-btn" data-model="model2">Select</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Naming Section -->
+        <section id="namingSection" class="naming-section hidden">
+            <div class="glass-card">
+                <h2>Give Your Friend a Name</h2>
+                <div class="name-input-container">
+                    <input type="text" id="friendNameInput" placeholder="Enter a name for your friend..." class="friend-name-input">
+                    <button id="nameFriendBtn" class="name-friend-btn">Name Friend 💫</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Chat Interface -->
+        <section id="chatSection" class="chat-section hidden">
+            <div class="chat-header">
+                <div class="chat-friend-info">
+                    <img src="" alt="" id="chatFriendImg" class="chat-friend-img">
+                    <div>
+                        <h3 id="chatFriendName">Luna</h3>
+                        <p class="friend-status">Online • AI Friend</p>
+                    </div>
+                </div>
+                <button id="voiceToggle" class="voice-btn">🔊 Voice On</button>
+            </div>
+            
+            <div class="chat-messages" id="chatMessages">
+                <div class="message friend-message">
+                    <div class="message-content">
+                        Hi! I'm your new AI friend. How are you today?
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-container">
+                <textarea id="userMessage" placeholder="Type your message..." rows="1" class="chat-textarea"></textarea>
+                <button id="sendMessage" class="send-btn">Send ✨</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="script.js"></script>
 </body>
 </html>
