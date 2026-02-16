@@ -12,67 +12,89 @@ let messageSound = true;
 let autoScroll = true;
 
 // DOM Elements
-const loadingScreen = document.getElementById('loadingScreen');
-const progressBar = document.getElementById('progressBar');
-const nameModal = document.getElementById('nameModal');
-const mainApp = document.getElementById('mainApp');
-const userNameInput = document.getElementById('userNameInput');
-const startJourneyBtn = document.getElementById('startJourneyBtn');
-const userGreeting = document.getElementById('userGreeting');
-const currentModel = document.getElementById('currentModel');
-const friendCards = document.querySelectorAll('.friend-card');
-const namingSection = document.getElementById('namingSection');
-const friendNameInput = document.getElementById('friendNameInput');
-const nameFriendBtn = document.getElementById('nameFriendBtn');
-const chatSection = document.getElementById('chatSection');
-const chatMessages = document.getElementById('chatMessages');
-const userMessage = document.getElementById('userMessage');
-const sendMessage = document.getElementById('sendMessage');
-const chatFriendImg = document.getElementById('chatFriendImg');
-const chatFriendName = document.getElementById('chatFriendName');
-const voiceToggle = document.getElementById('voiceToggle');
-const floatingModel = document.getElementById('floatingModel');
-const themeToggle = document.getElementById('themeToggle');
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsModal = document.getElementById('settingsModal');
-const emojiPickerBtn = document.getElementById('emojiPickerBtn');
-const emojiPicker = document.getElementById('emojiPicker');
-const clearChat = document.getElementById('clearChat');
-const rotateLeft = document.getElementById('rotateLeft');
-const rotateRight = document.getElementById('rotateRight');
-const resetRotation = document.getElementById('resetRotation');
-
-// Audio setup
-const messageSoundAudio = new Audio();
-messageSoundAudio.src = 'data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
+let loadingScreen, progressBar, nameModal, mainApp, userNameInput, startJourneyBtn;
+let userGreeting, currentModel, friendCards, namingSection, friendNameInput;
+let nameFriendBtn, chatSection, chatMessages, userMessage, sendMessage;
+let chatFriendImg, chatFriendName, voiceToggle, floatingModel, themeToggle;
+let settingsBtn, settingsModal, emojiPickerBtn, emojiPicker, clearChat;
+let rotateLeft, rotateRight, resetRotation;
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', async () => {
-    await loadConfig();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log('DOM loaded - initializing app');
+    initializeDOMElements();
+    loadConfig();
     initializeParticles();
     simulateLoading();
     setupEventListeners();
     initializeSpeechSynthesis();
 });
 
+// Initialize DOM elements
+function initializeDOMElements() {
+    console.log('Initializing DOM elements');
+    
+    loadingScreen = document.getElementById('loadingScreen');
+    progressBar = document.getElementById('progressBar');
+    nameModal = document.getElementById('nameModal');
+    mainApp = document.getElementById('mainApp');
+    userNameInput = document.getElementById('userNameInput');
+    startJourneyBtn = document.getElementById('startJourneyBtn');
+    userGreeting = document.getElementById('userGreeting');
+    currentModel = document.getElementById('currentModel');
+    friendCards = document.querySelectorAll('.friend-card');
+    namingSection = document.getElementById('namingSection');
+    friendNameInput = document.getElementById('friendNameInput');
+    nameFriendBtn = document.getElementById('nameFriendBtn');
+    chatSection = document.getElementById('chatSection');
+    chatMessages = document.getElementById('chatMessages');
+    userMessage = document.getElementById('userMessage');
+    sendMessage = document.getElementById('sendMessage');
+    chatFriendImg = document.getElementById('chatFriendImg');
+    chatFriendName = document.getElementById('chatFriendName');
+    voiceToggle = document.getElementById('voiceToggle');
+    floatingModel = document.getElementById('floatingModel');
+    themeToggle = document.getElementById('themeToggle');
+    settingsBtn = document.getElementById('settingsBtn');
+    settingsModal = document.getElementById('settingsModal');
+    emojiPickerBtn = document.getElementById('emojiPickerBtn');
+    emojiPicker = document.getElementById('emojiPicker');
+    clearChat = document.getElementById('clearChat');
+    rotateLeft = document.getElementById('rotateLeft');
+    rotateRight = document.getElementById('rotateRight');
+    resetRotation = document.getElementById('resetRotation');
+    
+    console.log('DOM elements initialized:', {
+        startJourneyBtn: !!startJourneyBtn,
+        userNameInput: !!userNameInput,
+        nameModal: !!nameModal
+    });
+}
+
 // Load configuration
 async function loadConfig() {
     try {
+        console.log('Loading config...');
         const response = await fetch('/api/config');
         const config = await response.json();
         GEMINI_KEY = config.geminiKey;
+        console.log('Config loaded:', { hasKey: !!GEMINI_KEY });
         
         if (!GEMINI_KEY) {
             showNotification('AI features will be limited. Please configure API key.', 'warning');
         }
     } catch (error) {
         console.error('Failed to load config:', error);
-        showNotification('Failed to load configuration', 'error');
+        // Don't show error for missing config in development
+        if (!window.location.hostname.includes('localhost')) {
+            showNotification('Failed to load configuration', 'error');
+        }
     }
 }
 
 // Simulate loading progress
 function simulateLoading() {
+    console.log('Simulating loading...');
     let progress = 0;
     const interval = setInterval(() => {
         progress += Math.random() * 10;
@@ -80,17 +102,24 @@ function simulateLoading() {
             progress = 100;
             clearInterval(interval);
             setTimeout(() => {
-                loadingScreen.classList.add('hidden');
-                nameModal.classList.add('active');
+                if (loadingScreen) {
+                    loadingScreen.classList.add('hidden');
+                }
+                if (nameModal) {
+                    nameModal.classList.add('active');
+                }
+                console.log('Loading complete - showing name modal');
             }, 500);
         }
-        progressBar.style.width = `${progress}%`;
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+        }
     }, 200);
 }
 
 // Initialize particles.js
 function initializeParticles() {
-    if (typeof particlesJS !== 'undefined') {
+    if (typeof particlesJS !== 'undefined' && document.getElementById('particles-js')) {
         particlesJS('particles-js', {
             particles: {
                 number: { value: 80, density: { enable: true, value_area: 800 } },
@@ -125,13 +154,31 @@ function initializeParticles() {
             },
             retina_detect: true
         });
+        console.log('Particles initialized');
     }
 }
 
 // Setup event listeners
 function setupEventListeners() {
-    // Start journey
-    startJourneyBtn.addEventListener('click', startJourney);
+    console.log('Setting up event listeners');
+    
+    // Start journey - FIXED: Using both click and touch events for mobile
+    if (startJourneyBtn) {
+        startJourneyBtn.addEventListener('click', (e) => {
+            console.log('Start journey button clicked');
+            e.preventDefault();
+            startJourney();
+        });
+        
+        // For mobile
+        startJourneyBtn.addEventListener('touchstart', (e) => {
+            console.log('Start journey button touched');
+            e.preventDefault();
+            startJourney();
+        });
+    } else {
+        console.error('Start journey button not found!');
+    }
     
     // Friend selection
     document.querySelectorAll('.select-friend-btn').forEach(btn => {
@@ -141,81 +188,127 @@ function setupEventListeners() {
     // Suggested names
     document.querySelectorAll('.suggested-name').forEach(btn => {
         btn.addEventListener('click', () => {
-            friendNameInput.value = btn.textContent;
+            if (friendNameInput) {
+                friendNameInput.value = btn.textContent;
+            }
         });
     });
     
     // Name friend
-    nameFriendBtn.addEventListener('click', nameFriend);
+    if (nameFriendBtn) {
+        nameFriendBtn.addEventListener('click', nameFriend);
+    }
     
     // Send message
-    sendMessage.addEventListener('click', sendUserMessage);
-    userMessage.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendUserMessage();
-        }
-    });
+    if (sendMessage) {
+        sendMessage.addEventListener('click', sendUserMessage);
+    }
+    
+    if (userMessage) {
+        userMessage.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendUserMessage();
+            }
+        });
+    }
     
     // Voice toggle
-    voiceToggle.addEventListener('click', toggleVoice);
+    if (voiceToggle) {
+        voiceToggle.addEventListener('click', toggleVoice);
+    }
     
     // Theme toggle
-    themeToggle.addEventListener('click', toggleTheme);
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
     
     // Settings
-    settingsBtn.addEventListener('click', () => {
-        settingsModal.classList.add('active');
-    });
+    if (settingsBtn && settingsModal) {
+        settingsBtn.addEventListener('click', () => {
+            settingsModal.classList.add('active');
+        });
+    }
     
     // Close settings
-    document.querySelector('.close-btn').addEventListener('click', () => {
-        settingsModal.classList.remove('active');
-    });
+    const closeBtn = document.querySelector('.close-btn');
+    if (closeBtn && settingsModal) {
+        closeBtn.addEventListener('click', () => {
+            settingsModal.classList.remove('active');
+        });
+    }
     
     // Emoji picker
-    emojiPickerBtn.addEventListener('click', () => {
-        emojiPicker.classList.toggle('hidden');
-    });
+    if (emojiPickerBtn && emojiPicker) {
+        emojiPickerBtn.addEventListener('click', () => {
+            emojiPicker.classList.toggle('hidden');
+        });
+    }
     
     // Emoji selection
     document.querySelectorAll('.emoji-grid span').forEach(emoji => {
         emoji.addEventListener('click', () => {
-            userMessage.value += emoji.textContent;
-            emojiPicker.classList.add('hidden');
+            if (userMessage) {
+                userMessage.value += emoji.textContent;
+            }
+            if (emojiPicker) {
+                emojiPicker.classList.add('hidden');
+            }
         });
     });
     
     // Clear chat
-    clearChat.addEventListener('click', clearChatHistory);
+    if (clearChat) {
+        clearChat.addEventListener('click', clearChatHistory);
+    }
     
     // Model rotation
-    rotateLeft.addEventListener('click', () => rotateModel(-15));
-    rotateRight.addEventListener('click', () => rotateModel(15));
-    resetRotation.addEventListener('click', () => rotateModel(0, true));
+    if (rotateLeft) {
+        rotateLeft.addEventListener('click', () => rotateModel(-15));
+    }
+    if (rotateRight) {
+        rotateRight.addEventListener('click', () => rotateModel(15));
+    }
+    if (resetRotation) {
+        resetRotation.addEventListener('click', () => rotateModel(0, true));
+    }
     
     // 3D model interaction
-    floatingModel.addEventListener('mousemove', handleModelHover);
-    floatingModel.addEventListener('mouseleave', () => {
-        floatingModel.style.transform = `rotateX(0) rotateY(${currentRotation}deg)`;
-    });
+    if (floatingModel) {
+        floatingModel.addEventListener('mousemove', handleModelHover);
+        floatingModel.addEventListener('mouseleave', () => {
+            floatingModel.style.transform = `rotateX(0) rotateY(${currentRotation}deg)`;
+        });
+    }
     
     // Settings controls
-    document.getElementById('voiceVolume').addEventListener('input', (e) => {
-        voiceVolume = e.target.value / 100;
-    });
+    const voiceVolumeInput = document.getElementById('voiceVolume');
+    if (voiceVolumeInput) {
+        voiceVolumeInput.addEventListener('input', (e) => {
+            voiceVolume = e.target.value / 100;
+        });
+    }
     
-    document.getElementById('voiceSpeed').addEventListener('input', (e) => {
-        voiceSpeed = parseFloat(e.target.value);
-    });
+    const voiceSpeedInput = document.getElementById('voiceSpeed');
+    if (voiceSpeedInput) {
+        voiceSpeedInput.addEventListener('input', (e) => {
+            voiceSpeed = parseFloat(e.target.value);
+        });
+    }
     
-    document.getElementById('messageSound').addEventListener('change', (e) => {
-        messageSound = e.target.checked;
-    });
+    const messageSoundCheck = document.getElementById('messageSound');
+    if (messageSoundCheck) {
+        messageSoundCheck.addEventListener('change', (e) => {
+            messageSound = e.target.checked;
+        });
+    }
     
-    document.getElementById('autoScroll').addEventListener('change', (e) => {
-        autoScroll = e.target.checked;
-    });
+    const autoScrollCheck = document.getElementById('autoScroll');
+    if (autoScrollCheck) {
+        autoScrollCheck.addEventListener('change', (e) => {
+            autoScroll = e.target.checked;
+        });
+    }
     
     // Theme options
     document.querySelectorAll('.theme-option').forEach(btn => {
@@ -225,34 +318,69 @@ function setupEventListeners() {
             btn.classList.add('active');
             
             // Update theme toggle icon
-            const icon = themeToggle.querySelector('i');
-            if (btn.dataset.theme === 'light') {
-                icon.className = 'fas fa-sun';
-            } else {
-                icon.className = 'fas fa-moon';
+            if (themeToggle) {
+                const icon = themeToggle.querySelector('i');
+                if (btn.dataset.theme === 'light') {
+                    icon.className = 'fas fa-sun';
+                } else {
+                    icon.className = 'fas fa-moon';
+                }
             }
         });
     });
     
     // Click outside to close emoji picker
     document.addEventListener('click', (e) => {
-        if (!emojiPicker.contains(e.target) && !emojiPickerBtn.contains(e.target)) {
+        if (emojiPicker && emojiPickerBtn && 
+            !emojiPicker.contains(e.target) && 
+            !emojiPickerBtn.contains(e.target)) {
             emojiPicker.classList.add('hidden');
         }
     });
+    
+    console.log('Event listeners setup complete');
 }
 
-// Start journey
+// Start journey - FIXED: Added better validation and error handling
 function startJourney() {
+    console.log('startJourney function called');
+    
+    if (!userNameInput) {
+        console.error('userNameInput not found');
+        return;
+    }
+    
     userName = userNameInput.value.trim();
+    console.log('Username entered:', userName);
+    
     if (userName) {
-        nameModal.classList.remove('active');
-        mainApp.classList.add('visible');
-        userGreeting.textContent = `Welcome, ${userName}! 👋`;
+        // Hide modal
+        if (nameModal) {
+            nameModal.classList.remove('active');
+        }
+        
+        // Show main app
+        if (mainApp) {
+            mainApp.classList.add('visible');
+        }
+        
+        // Update greeting
+        if (userGreeting) {
+            userGreeting.textContent = `Welcome, ${userName}! 👋`;
+        }
+        
+        // Speak welcome
         speakText(`Welcome ${userName}!`);
+        
+        // Show success notification
         showNotification(`Nice to meet you, ${userName}!`, 'success');
+        
+        console.log('Journey started successfully for:', userName);
     } else {
-        shakeElement(userNameInput);
+        console.log('No username entered');
+        if (userNameInput) {
+            shakeElement(userNameInput);
+        }
         showNotification('Please enter your name!', 'error');
     }
 }
@@ -261,11 +389,16 @@ function startJourney() {
 function selectFriend(e) {
     const btn = e.currentTarget;
     const card = btn.closest('.friend-card');
+    
+    if (!card) return;
+    
     const model = card.dataset.model;
     const defaultName = card.dataset.name;
     
     selectedModel = model;
-    currentModel.src = `public/${model}.png`;
+    if (currentModel) {
+        currentModel.src = `public/${model}.png`;
+    }
     
     // Animate selection
     card.style.transform = 'scale(0.95)';
@@ -274,29 +407,43 @@ function selectFriend(e) {
     }, 200);
     
     // Show naming section
-    namingSection.classList.remove('hidden');
-    namingSection.scrollIntoView({ behavior: 'smooth' });
+    if (namingSection) {
+        namingSection.classList.remove('hidden');
+        namingSection.scrollIntoView({ behavior: 'smooth' });
+    }
     
     // Pre-fill with default name
-    friendNameInput.value = defaultName;
+    if (friendNameInput) {
+        friendNameInput.value = defaultName;
+    }
     
     showNotification(`Great choice! Now give your friend a name!`, 'info');
 }
 
 // Name friend
 function nameFriend() {
+    if (!friendNameInput) return;
+    
     friendName = friendNameInput.value.trim();
     
     if (friendName && selectedModel) {
         // Hide naming section
-        namingSection.classList.add('hidden');
+        if (namingSection) {
+            namingSection.classList.add('hidden');
+        }
         
         // Update chat header
-        chatFriendImg.src = `public/${selectedModel}.png`;
-        chatFriendName.textContent = friendName;
+        if (chatFriendImg) {
+            chatFriendImg.src = `public/${selectedModel}.png`;
+        }
+        if (chatFriendName) {
+            chatFriendName.textContent = friendName;
+        }
         
         // Show chat section
-        chatSection.classList.remove('hidden');
+        if (chatSection) {
+            chatSection.classList.remove('hidden');
+        }
         
         // Add welcome message
         const welcomeMessage = `Hi ${userName}! I'm ${friendName}, your new AI friend! How can I make your day better today? 💫`;
@@ -306,7 +453,9 @@ function nameFriend() {
         speakText(`Hello! I'm ${friendName}`);
         
         // Scroll to chat
-        chatSection.scrollIntoView({ behavior: 'smooth' });
+        if (chatSection) {
+            chatSection.scrollIntoView({ behavior: 'smooth' });
+        }
         
         // Initialize chat history
         chatHistory = [
@@ -322,13 +471,17 @@ function nameFriend() {
         
         showNotification(`${friendName} is now your friend! 🎉`, 'success');
     } else {
-        shakeElement(friendNameInput);
+        if (friendNameInput) {
+            shakeElement(friendNameInput);
+        }
         showNotification('Please enter a name for your friend!', 'error');
     }
 }
 
 // Send user message
 async function sendUserMessage() {
+    if (!userMessage) return;
+    
     const message = userMessage.value.trim();
     if (!message) return;
     
@@ -436,13 +589,15 @@ async function getGeminiResponse(message) {
 
 // Helper Functions
 function addMessage(text, sender) {
+    if (!chatMessages) return;
+    
     const messageDiv = document.createElement('div');
     messageDiv.className = `message ${sender}-message fade-in`;
     
-    if (sender === 'friend') {
+    if (sender === 'friend' && selectedModel) {
         const avatarDiv = document.createElement('div');
         avatarDiv.className = 'message-avatar';
-        avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName}">`;
+        avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName || 'Friend'}">`;
         messageDiv.appendChild(avatarDiv);
     }
     
@@ -468,13 +623,15 @@ function addMessage(text, sender) {
 }
 
 function showTypingIndicator() {
+    if (!chatMessages || !selectedModel) return;
+    
     const indicator = document.createElement('div');
     indicator.className = 'message friend-message typing-indicator-container';
     indicator.id = 'typingIndicator';
     
     const avatarDiv = document.createElement('div');
     avatarDiv.className = 'message-avatar';
-    avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName}">`;
+    avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName || 'Friend'}">`;
     indicator.appendChild(avatarDiv);
     
     const typingDiv = document.createElement('div');
@@ -499,8 +656,12 @@ function removeTypingIndicator() {
 
 function toggleVoice() {
     isVoiceOn = !isVoiceOn;
-    const icon = voiceToggle.querySelector('i');
-    icon.className = isVoiceOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+    if (voiceToggle) {
+        const icon = voiceToggle.querySelector('i');
+        if (icon) {
+            icon.className = isVoiceOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+        }
+    }
     showNotification(`Voice ${isVoiceOn ? 'on' : 'off'}`, 'info');
 }
 
@@ -510,15 +671,23 @@ function toggleTheme() {
     const nextTheme = themes[(themes.indexOf(currentTheme) + 1) % themes.length];
     document.documentElement.setAttribute('data-theme', nextTheme);
     
-    const icon = themeToggle.querySelector('i');
-    icon.className = nextTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+    if (themeToggle) {
+        const icon = themeToggle.querySelector('i');
+        if (icon) {
+            icon.className = nextTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
 }
 
 function clearChatHistory() {
+    if (!chatMessages) return;
+    
     if (confirm('Clear all messages?')) {
         chatMessages.innerHTML = '';
         chatHistory = [];
-        addMessage(`Hi ${userName}! I'm ${friendName}. Let's start fresh! How are you? 💫`, 'friend');
+        if (userName && friendName) {
+            addMessage(`Hi ${userName}! I'm ${friendName}. Let's start fresh! How are you? 💫`, 'friend');
+        }
         showNotification('Chat cleared!', 'info');
     }
 }
@@ -529,10 +698,14 @@ function rotateModel(degrees, reset = false) {
     } else {
         currentRotation += degrees;
     }
-    floatingModel.style.transform = `rotateY(${currentRotation}deg)`;
+    if (floatingModel) {
+        floatingModel.style.transform = `rotateY(${currentRotation}deg)`;
+    }
 }
 
 function handleModelHover(e) {
+    if (!floatingModel) return;
+    
     const rect = floatingModel.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -573,16 +746,38 @@ function initializeSpeechSynthesis() {
 }
 
 function playMessageSound() {
-    if (messageSound) {
-        messageSoundAudio.play().catch(() => {});
+    // Simple beep sound using Web Audio API
+    if (!messageSound) return;
+    
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        gainNode.gain.value = 0.1;
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.1);
+    } catch (e) {
+        console.log('Audio play failed:', e);
     }
 }
 
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
+    
+    let icon = 'info-circle';
+    if (type === 'success') icon = 'check-circle';
+    if (type === 'error') icon = 'exclamation-circle';
+    if (type === 'warning') icon = 'exclamation-triangle';
+    
     notification.innerHTML = `
-        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <i class="fas fa-${icon}"></i>
         <span>${message}</span>
     `;
     
@@ -590,7 +785,7 @@ function showNotification(message, type = 'info') {
         position: fixed;
         top: 20px;
         right: 20px;
-        background: ${type === 'success' ? 'var(--success-color)' : type === 'error' ? 'var(--error-color)' : 'var(--primary-color)'};
+        background: ${type === 'success' ? '#4ade80' : type === 'error' ? '#f87171' : type === 'warning' ? '#fbbf24' : '#667eea'};
         color: white;
         padding: 12px 24px;
         border-radius: 50px;
@@ -599,7 +794,8 @@ function showNotification(message, type = 'info') {
         gap: 10px;
         z-index: 2000;
         animation: slideIn 0.3s ease;
-        box-shadow: var(--shadow-lg);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        font-weight: 500;
     `;
     
     document.body.appendChild(notification);
@@ -611,22 +807,29 @@ function showNotification(message, type = 'info') {
 }
 
 function shakeElement(element) {
+    if (!element) return;
     element.classList.add('shake');
     setTimeout(() => element.classList.remove('shake'), 300);
 }
 
-// Add slideOut animation
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideOut {
-        from {
-            transform: translateX(0);
-            opacity: 1;
+// Add slideOut animation if not exists
+if (!document.querySelector('#animation-styles')) {
+    const style = document.createElement('style');
+    style.id = 'animation-styles';
+    style.textContent = `
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
         }
-        to {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
+    `;
+    document.head.appendChild(style);
+}
+
+// Debug function to check if everything loaded
+console.log('Script loaded and initialized');
