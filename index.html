@@ -3,266 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D AI Friends Pro - Your Virtual Companion</title>
+    <title>3D AI Companion</title>
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
     <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
-        <div class="loader"></div>
-        <h2 class="loading-text">Initializing AI Friends...</h2>
-        <div class="loading-progress">
-            <div class="progress-bar" id="progressBar"></div>
+        <div class="spinner"></div>
+        <h2>Loading Your AI Companion...</h2>
+        <div class="progress-bar-container">
+            <div id="progressBar" class="progress-bar"></div>
         </div>
     </div>
 
-    <!-- Name Input Modal -->
-    <div id="nameModal" class="modal">
+    <!-- Welcome Modal -->
+    <div id="welcomeModal" class="modal">
         <div class="modal-content">
-            <div class="modal-header">
-                <h1 class="gradient-text">Welcome to 3D AI Friends Pro! ✨</h1>
-                <p class="subtitle">Enter your name to begin your journey</p>
-            </div>
-            <div class="modal-body">
-                <div class="input-group">
-                    <i class="fas fa-user input-icon"></i>
-                    <input type="text" id="userNameInput" placeholder="Your name..." class="name-input">
-                </div>
-                <button id="startJourneyBtn" class="start-btn">
-                    <span>Start Journey</span>
-                    <i class="fas fa-rocket"></i>
-                </button>
-            </div>
-            <div class="modal-footer">
-                <p class="hint"><i class="fas fa-magic"></i> Your personal AI companion awaits!</p>
-            </div>
+            <i class="fas fa-robot modal-icon"></i>
+            <h1>Welcome to AI Companion</h1>
+            <p>Enter your name to begin your journey</p>
+            <input type="text" id="userNameInput" placeholder="Your name" class="modal-input">
+            <button id="startBtn" class="modal-btn">Start Journey <i class="fas fa-arrow-right"></i></button>
         </div>
     </div>
 
     <!-- Main App -->
-    <div id="mainApp" class="main-app">
-        <!-- Particles Background -->
-        <div id="particles-js"></div>
-
+    <div id="mainApp" class="main-app hidden">
         <!-- Header -->
-        <header class="glass-header">
-            <div class="header-content">
-                <div class="logo-container">
-                    <i class="fas fa-robot logo-icon"></i>
-                    <h1 class="logo">AI Friends Pro</h1>
-                </div>
-                <div class="header-controls">
-                    <button id="themeToggle" class="icon-btn">
-                        <i class="fas fa-moon"></i>
-                    </button>
-                    <button id="settingsBtn" class="icon-btn">
-                        <i class="fas fa-cog"></i>
-                    </button>
-                    <div class="user-greeting" id="userGreeting"></div>
-                </div>
+        <header>
+            <div class="logo">
+                <i class="fas fa-robot"></i>
+                <span>AI Companion</span>
             </div>
+            <div id="greeting" class="greeting"></div>
         </header>
 
-        <!-- 3D Model Section -->
-        <section class="model-section">
-            <div class="model-container">
-                <div class="floating-model" id="floatingModel">
-                    <img src="public/model1.png" alt="3D Model" class="model-img" id="currentModel">
-                    <div class="glow-effect"></div>
-                    <div class="particle-effects"></div>
-                </div>
-                <div class="model-controls">
-                    <button class="model-control-btn" id="rotateLeft"><i class="fas fa-undo"></i></button>
-                    <button class="model-control-btn" id="resetRotation"><i class="fas fa-sync-alt"></i></button>
-                    <button class="model-control-btn" id="rotateRight"><i class="fas fa-redo"></i></button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Friend Selection Section -->
-        <section class="friend-selection">
-            <h2 class="section-title">
-                <i class="fas fa-users"></i>
-                Choose Your Friend
-            </h2>
-            <div class="friend-cards" id="friendCards">
-                <div class="friend-card" data-model="model1" data-name="Luna" data-personality="wise">
-                    <div class="card-badge">Popular</div>
-                    <div class="card-image">
-                        <img src="public/model1.png" alt="Friend 1">
-                        <div class="card-overlay"></div>
-                    </div>
-                    <div class="card-content">
-                        <h3>Luna</h3>
-                        <div class="personality-tags">
-                            <span class="tag">Wise</span>
-                            <span class="tag">Caring</span>
-                            <span class="tag">Empathetic</span>
-                        </div>
-                        <p class="card-description">A gentle soul who loves deep conversations and offers wisdom</p>
-                        <button class="select-friend-btn" data-model="model1">
-                            <span>Select Luna</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="friend-card" data-model="model2" data-name="Nova" data-personality="energetic">
-                    <div class="card-badge">New</div>
-                    <div class="card-image">
-                        <img src="public/model2.png" alt="Friend 2">
-                        <div class="card-overlay"></div>
-                    </div>
-                    <div class="card-content">
-                        <h3>Nova</h3>
-                        <div class="personality-tags">
-                            <span class="tag">Energetic</span>
-                            <span class="tag">Fun</span>
-                            <span class="tag">Creative</span>
-                        </div>
-                        <p class="card-description">Bursting with energy, always ready for adventures and fun games</p>
-                        <button class="select-friend-btn" data-model="model2">
-                            <span>Select Nova</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Naming Section -->
-        <section id="namingSection" class="naming-section hidden">
-            <div class="glass-card">
-                <i class="fas fa-pen-fancy section-icon"></i>
-                <h2>Give Your Friend a Special Name</h2>
-                <p class="section-subtitle">Make your friendship unique!</p>
-                <div class="name-input-container">
-                    <div class="input-group large">
-                        <i class="fas fa-tag input-icon"></i>
-                        <input type="text" id="friendNameInput" placeholder="Enter a name for your friend..." class="friend-name-input">
-                    </div>
-                    <div class="suggested-names">
-                        <button class="suggested-name">Buddy</button>
-                        <button class="suggested-name">Pal</button>
-                        <button class="suggested-name">Companion</button>
-                        <button class="suggested-name">Friend</button>
-                    </div>
-                    <button id="nameFriendBtn" class="name-friend-btn">
-                        <span>Name Friend</span>
-                        <i class="fas fa-heart"></i>
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Chat Interface -->
-        <section id="chatSection" class="chat-section hidden">
-            <div class="chat-header glass-card">
-                <div class="chat-friend-info">
-                    <div class="friend-avatar-container">
-                        <img src="" alt="" id="chatFriendImg" class="chat-friend-img">
-                        <div class="status-indicator online"></div>
-                    </div>
-                    <div>
-                        <h3 id="chatFriendName">Luna</h3>
-                        <div class="friend-status">
-                            <span class="status-dot"></span>
-                            Online • AI Friend
-                        </div>
-                    </div>
-                </div>
-                <div class="chat-controls">
-                    <button id="voiceToggle" class="control-btn">
-                        <i class="fas fa-volume-up"></i>
-                    </button>
-                    <button id="emojiPickerBtn" class="control-btn">
-                        <i class="fas fa-smile"></i>
-                    </button>
-                    <button id="clearChat" class="control-btn">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="chat-messages" id="chatMessages">
-                <div class="message welcome-message friend-message">
-                    <div class="message-avatar">
-                        <img src="public/model1.png" alt="AI">
-                    </div>
-                    <div class="message-content">
-                        Hi! I'm your new AI friend. How are you today?
-                        <span class="message-time">Just now</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="chat-input-container glass-card">
-                <button class="attach-btn">
-                    <i class="fas fa-paperclip"></i>
-                </button>
-                <textarea id="userMessage" placeholder="Type your message..." rows="1" class="chat-textarea"></textarea>
-                <button id="sendMessage" class="send-btn">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
-        </section>
-
-        <!-- Emoji Picker (Hidden by default) -->
-        <div id="emojiPicker" class="emoji-picker hidden">
-            <div class="emoji-grid">
-                <span>😊</span><span>😂</span><span>🥰</span><span>😎</span>
-                <span>🤔</span><span>😴</span><span>🥳</span><span>😱</span>
-                <span>🤗</span><span>😇</span><span>🤪</span><span>🥺</span>
+        <!-- 3D Model Display -->
+        <div class="model-section">
+            <div class="model-container" id="modelContainer">
+                <img src="public/model1.png" alt="AI Model" id="modelImage" class="model-image">
+                <div class="model-glow"></div>
             </div>
         </div>
 
-        <!-- Settings Modal -->
-        <div id="settingsModal" class="modal">
-            <div class="modal-content settings-modal">
-                <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button class="close-btn"><i class="fas fa-times"></i></button>
+        <!-- Friend Selection -->
+        <div class="selection-section" id="selectionSection">
+            <h2>Choose Your AI Friend</h2>
+            <div class="friend-cards">
+                <div class="friend-card" data-model="model1" data-name="Luna">
+                    <img src="public/model1.png" alt="Luna">
+                    <h3>Luna</h3>
+                    <p>Wise & Caring</p>
+                    <button class="select-btn" data-model="model1">Select</button>
                 </div>
-                <div class="modal-body">
-                    <div class="settings-group">
-                        <h3>Voice Settings</h3>
-                        <div class="setting-item">
-                            <label>Voice Volume</label>
-                            <input type="range" id="voiceVolume" min="0" max="100" value="80">
-                        </div>
-                        <div class="setting-item">
-                            <label>Voice Speed</label>
-                            <input type="range" id="voiceSpeed" min="0.5" max="2" step="0.1" value="1">
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h3>Chat Settings</h3>
-                        <div class="setting-item">
-                            <label>Message Sound</label>
-                            <input type="checkbox" id="messageSound" checked>
-                        </div>
-                        <div class="setting-item">
-                            <label>Auto-scroll</label>
-                            <input type="checkbox" id="autoScroll" checked>
-                        </div>
-                    </div>
-                    <div class="settings-group">
-                        <h3>Theme</h3>
-                        <div class="theme-options">
-                            <button class="theme-option" data-theme="dark">Dark</button>
-                            <button class="theme-option" data-theme="light">Light</button>
-                            <button class="theme-option" data-theme="purple">Purple</button>
-                            <button class="theme-option" data-theme="ocean">Ocean</button>
-                        </div>
+                <div class="friend-card" data-model="model2" data-name="Nova">
+                    <img src="public/model2.png" alt="Nova">
+                    <h3>Nova</h3>
+                    <p>Energetic & Fun</p>
+                    <button class="select-btn" data-model="model2">Select</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Naming Section -->
+        <div class="naming-section hidden" id="namingSection">
+            <div class="naming-card">
+                <h2>Name Your Friend</h2>
+                <p>Give your AI companion a special name</p>
+                <input type="text" id="friendNameInput" placeholder="Enter name">
+                <button id="nameBtn" class="action-btn">Continue <i class="fas fa-heart"></i></button>
+            </div>
+        </div>
+
+        <!-- Chat Section -->
+        <div class="chat-section hidden" id="chatSection">
+            <div class="chat-header">
+                <div class="chat-friend-info">
+                    <img src="" alt="" id="chatFriendImage" class="chat-friend-image">
+                    <div>
+                        <h3 id="chatFriendNameDisplay"></h3>
+                        <span class="online-status">● Online</span>
                     </div>
                 </div>
+                <button id="voiceToggleBtn" class="icon-btn">
+                    <i class="fas fa-volume-up"></i>
+                </button>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <!-- Messages will appear here -->
+            </div>
+
+            <div class="chat-input-area">
+                <textarea id="messageInput" placeholder="Type your message..." rows="1"></textarea>
+                <button id="sendBtn" class="send-btn">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
