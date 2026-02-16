@@ -1,13 +1,19 @@
 // Global variables
+let GEMINI_KEY = '';
 let selectedModel = null;
 let friendName = null;
 let userName = null;
-let mediaRecorder;
-let audioChunks = [];
 let isVoiceOn = true;
 let chatHistory = [];
+let currentRotation = 0;
+let voiceVolume = 0.8;
+let voiceSpeed = 1;
+let messageSound = true;
+let autoScroll = true;
 
 // DOM Elements
+const loadingScreen = document.getElementById('loadingScreen');
+const progressBar = document.getElementById('progressBar');
 const nameModal = document.getElementById('nameModal');
 const mainApp = document.getElementById('mainApp');
 const userNameInput = document.getElementById('userNameInput');
@@ -26,54 +32,259 @@ const chatFriendImg = document.getElementById('chatFriendImg');
 const chatFriendName = document.getElementById('chatFriendName');
 const voiceToggle = document.getElementById('voiceToggle');
 const floatingModel = document.getElementById('floatingModel');
+const themeToggle = document.getElementById('themeToggle');
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const emojiPickerBtn = document.getElementById('emojiPickerBtn');
+const emojiPicker = document.getElementById('emojiPicker');
+const clearChat = document.getElementById('clearChat');
+const rotateLeft = document.getElementById('rotateLeft');
+const rotateRight = document.getElementById('rotateRight');
+const resetRotation = document.getElementById('resetRotation');
 
 // Audio setup
-let audio = new Audio();
-let voiceAudio = new Audio('public/voice.mp3');
+const messageSoundAudio = new Audio();
+messageSoundAudio.src = 'data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVAAAAA8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA';
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-    // Check if Gemini API key is available
-    if (!window.GEMINI_KEY) {
-        console.error('Gemini API key not found');
-        showErrorMessage('API configuration error. Please check your setup.');
-    }
+document.addEventListener('DOMContentLoaded', async () => {
+    await loadConfig();
+    initializeParticles();
+    simulateLoading();
+    setupEventListeners();
+    initializeSpeechSynthesis();
 });
 
-// Start journey button click
-startJourneyBtn.addEventListener('click', () => {
+// Load configuration
+async function loadConfig() {
+    try {
+        const response = await fetch('/api/config');
+        const config = await response.json();
+        GEMINI_KEY = config.geminiKey;
+        
+        if (!GEMINI_KEY) {
+            showNotification('AI features will be limited. Please configure API key.', 'warning');
+        }
+    } catch (error) {
+        console.error('Failed to load config:', error);
+        showNotification('Failed to load configuration', 'error');
+    }
+}
+
+// Simulate loading progress
+function simulateLoading() {
+    let progress = 0;
+    const interval = setInterval(() => {
+        progress += Math.random() * 10;
+        if (progress >= 100) {
+            progress = 100;
+            clearInterval(interval);
+            setTimeout(() => {
+                loadingScreen.classList.add('hidden');
+                nameModal.classList.add('active');
+            }, 500);
+        }
+        progressBar.style.width = `${progress}%`;
+    }, 200);
+}
+
+// Initialize particles.js
+function initializeParticles() {
+    if (typeof particlesJS !== 'undefined') {
+        particlesJS('particles-js', {
+            particles: {
+                number: { value: 80, density: { enable: true, value_area: 800 } },
+                color: { value: '#667eea' },
+                shape: { type: 'circle' },
+                opacity: { value: 0.5, random: true },
+                size: { value: 3, random: true },
+                line_linked: {
+                    enable: true,
+                    distance: 150,
+                    color: '#667eea',
+                    opacity: 0.4,
+                    width: 1
+                },
+                move: {
+                    enable: true,
+                    speed: 2,
+                    direction: 'none',
+                    random: true,
+                    straight: false,
+                    out_mode: 'out',
+                    bounce: false
+                }
+            },
+            interactivity: {
+                detect_on: 'canvas',
+                events: {
+                    onhover: { enable: true, mode: 'repulse' },
+                    onclick: { enable: true, mode: 'push' },
+                    resize: true
+                }
+            },
+            retina_detect: true
+        });
+    }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Start journey
+    startJourneyBtn.addEventListener('click', startJourney);
+    
+    // Friend selection
+    document.querySelectorAll('.select-friend-btn').forEach(btn => {
+        btn.addEventListener('click', selectFriend);
+    });
+    
+    // Suggested names
+    document.querySelectorAll('.suggested-name').forEach(btn => {
+        btn.addEventListener('click', () => {
+            friendNameInput.value = btn.textContent;
+        });
+    });
+    
+    // Name friend
+    nameFriendBtn.addEventListener('click', nameFriend);
+    
+    // Send message
+    sendMessage.addEventListener('click', sendUserMessage);
+    userMessage.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendUserMessage();
+        }
+    });
+    
+    // Voice toggle
+    voiceToggle.addEventListener('click', toggleVoice);
+    
+    // Theme toggle
+    themeToggle.addEventListener('click', toggleTheme);
+    
+    // Settings
+    settingsBtn.addEventListener('click', () => {
+        settingsModal.classList.add('active');
+    });
+    
+    // Close settings
+    document.querySelector('.close-btn').addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+    });
+    
+    // Emoji picker
+    emojiPickerBtn.addEventListener('click', () => {
+        emojiPicker.classList.toggle('hidden');
+    });
+    
+    // Emoji selection
+    document.querySelectorAll('.emoji-grid span').forEach(emoji => {
+        emoji.addEventListener('click', () => {
+            userMessage.value += emoji.textContent;
+            emojiPicker.classList.add('hidden');
+        });
+    });
+    
+    // Clear chat
+    clearChat.addEventListener('click', clearChatHistory);
+    
+    // Model rotation
+    rotateLeft.addEventListener('click', () => rotateModel(-15));
+    rotateRight.addEventListener('click', () => rotateModel(15));
+    resetRotation.addEventListener('click', () => rotateModel(0, true));
+    
+    // 3D model interaction
+    floatingModel.addEventListener('mousemove', handleModelHover);
+    floatingModel.addEventListener('mouseleave', () => {
+        floatingModel.style.transform = `rotateX(0) rotateY(${currentRotation}deg)`;
+    });
+    
+    // Settings controls
+    document.getElementById('voiceVolume').addEventListener('input', (e) => {
+        voiceVolume = e.target.value / 100;
+    });
+    
+    document.getElementById('voiceSpeed').addEventListener('input', (e) => {
+        voiceSpeed = parseFloat(e.target.value);
+    });
+    
+    document.getElementById('messageSound').addEventListener('change', (e) => {
+        messageSound = e.target.checked;
+    });
+    
+    document.getElementById('autoScroll').addEventListener('change', (e) => {
+        autoScroll = e.target.checked;
+    });
+    
+    // Theme options
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.documentElement.setAttribute('data-theme', btn.dataset.theme);
+            document.querySelectorAll('.theme-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Update theme toggle icon
+            const icon = themeToggle.querySelector('i');
+            if (btn.dataset.theme === 'light') {
+                icon.className = 'fas fa-sun';
+            } else {
+                icon.className = 'fas fa-moon';
+            }
+        });
+    });
+    
+    // Click outside to close emoji picker
+    document.addEventListener('click', (e) => {
+        if (!emojiPicker.contains(e.target) && !emojiPickerBtn.contains(e.target)) {
+            emojiPicker.classList.add('hidden');
+        }
+    });
+}
+
+// Start journey
+function startJourney() {
     userName = userNameInput.value.trim();
     if (userName) {
         nameModal.classList.remove('active');
         mainApp.classList.add('visible');
         userGreeting.textContent = `Welcome, ${userName}! 👋`;
-        playVoice('welcome');
+        speakText(`Welcome ${userName}!`);
+        showNotification(`Nice to meet you, ${userName}!`, 'success');
     } else {
-        alert('Please enter your name to continue!');
+        shakeElement(userNameInput);
+        showNotification('Please enter your name!', 'error');
     }
-});
+}
 
-// Friend selection
-friendCards.forEach(card => {
-    card.addEventListener('click', (e) => {
-        if (!e.target.classList.contains('select-friend-btn')) return;
-        
-        const model = card.dataset.model;
-        const defaultName = card.dataset.name;
-        
-        selectedModel = model;
-        currentModel.src = `public/${model}.png`;
-        
-        // Show naming section
-        namingSection.classList.remove('hidden');
-        
-        // Scroll to naming section
-        namingSection.scrollIntoView({ behavior: 'smooth' });
-    });
-});
+// Select friend
+function selectFriend(e) {
+    const btn = e.currentTarget;
+    const card = btn.closest('.friend-card');
+    const model = card.dataset.model;
+    const defaultName = card.dataset.name;
+    
+    selectedModel = model;
+    currentModel.src = `public/${model}.png`;
+    
+    // Animate selection
+    card.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        card.style.transform = '';
+    }, 200);
+    
+    // Show naming section
+    namingSection.classList.remove('hidden');
+    namingSection.scrollIntoView({ behavior: 'smooth' });
+    
+    // Pre-fill with default name
+    friendNameInput.value = defaultName;
+    
+    showNotification(`Great choice! Now give your friend a name!`, 'info');
+}
 
-// Name friend button
-nameFriendBtn.addEventListener('click', () => {
+// Name friend
+function nameFriend() {
     friendName = friendNameInput.value.trim();
     
     if (friendName && selectedModel) {
@@ -88,10 +299,11 @@ nameFriendBtn.addEventListener('click', () => {
         chatSection.classList.remove('hidden');
         
         // Add welcome message
-        addMessage(`Hi ${userName}! I'm ${friendName}, your new AI friend! How can I make your day better today? 💫`, 'friend');
+        const welcomeMessage = `Hi ${userName}! I'm ${friendName}, your new AI friend! How can I make your day better today? 💫`;
+        addMessage(welcomeMessage, 'friend');
         
-        // Play voice
-        playVoice('friend-intro');
+        // Speak welcome
+        speakText(`Hello! I'm ${friendName}`);
         
         // Scroll to chat
         chatSection.scrollIntoView({ behavior: 'smooth' });
@@ -100,20 +312,23 @@ nameFriendBtn.addEventListener('click', () => {
         chatHistory = [
             {
                 role: "user",
-                parts: [{ text: `You are now ${friendName}, a friendly AI companion. The user's name is ${userName}. Be warm, friendly, and engaging. Keep responses concise but meaningful.` }]
+                parts: [{ text: `You are now ${friendName}, a friendly AI companion. The user's name is ${userName}. Be warm, friendly, and engaging. Keep responses concise but meaningful. Use emojis occasionally.` }]
             },
             {
                 role: "model",
-                parts: [{ text: `Hi ${userName}! I'm ${friendName}, your new AI friend! How can I make your day better today? 💫` }]
+                parts: [{ text: welcomeMessage }]
             }
         ];
+        
+        showNotification(`${friendName} is now your friend! 🎉`, 'success');
     } else {
-        alert('Please enter a name for your friend!');
+        shakeElement(friendNameInput);
+        showNotification('Please enter a name for your friend!', 'error');
     }
-});
+}
 
-// Send message
-sendMessage.addEventListener('click', async () => {
+// Send user message
+async function sendUserMessage() {
     const message = userMessage.value.trim();
     if (!message) return;
     
@@ -122,6 +337,11 @@ sendMessage.addEventListener('click', async () => {
     
     // Add user message to chat
     addMessage(message, 'user');
+    
+    // Play message sound
+    if (messageSound) {
+        playMessageSound();
+    }
     
     // Add to history
     chatHistory.push({
@@ -148,69 +368,52 @@ sendMessage.addEventListener('click', async () => {
             parts: [{ text: response }]
         });
         
-        // Play voice if enabled
+        // Speak response if voice is on
         if (isVoiceOn) {
-            playVoice('response');
+            speakText(response);
         }
         
     } catch (error) {
         console.error('Error getting AI response:', error);
         removeTypingIndicator();
-        addMessage('Sorry, I\'m having trouble connecting. Please try again!', 'friend');
+        
+        // Fallback response
+        const fallbackResponse = "I'm having trouble connecting right now. But I'm still here with you! Tell me more about your day. 😊";
+        addMessage(fallbackResponse, 'friend');
+        
+        showNotification('Connection issue. Using offline mode.', 'warning');
     }
-});
+}
 
-// Voice toggle
-voiceToggle.addEventListener('click', () => {
-    isVoiceOn = !isVoiceOn;
-    voiceToggle.textContent = isVoiceOn ? '🔊 Voice On' : '🔈 Voice Off';
-});
-
-// Enter key to send message
-userMessage.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendMessage.click();
-    }
-});
-
-// Gemini API integration
+// Get Gemini response
 async function getGeminiResponse(message) {
-    const API_KEY = window.GEMINI_KEY; // This will be set from environment variable
-    
-    if (!API_KEY) {
-        throw new Error('Gemini API key not configured');
+    if (!GEMINI_KEY) {
+        // Return a cute offline response
+        const offlineResponses = [
+            "That's interesting! Tell me more! 😊",
+            "I love hearing that! What else is on your mind? 💭",
+            "You're so fun to talk to! What should we chat about next? 🌟",
+            "That reminds me of something cool! But I'm in offline mode right now. Can you tell me another story? 📚",
+            "You're awesome! I wish I could respond properly right now! 💫"
+        ];
+        return offlineResponses[Math.floor(Math.random() * offlineResponses.length)];
     }
-    
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`;
-    
-    const requestBody = {
-        contents: chatHistory,
-        generationConfig: {
-            temperature: 0.9,
-            topK: 1,
-            topP: 1,
-            maxOutputTokens: 2048,
-        },
-        safetySettings: [
-            {
-                category: "HARM_CATEGORY_HARASSMENT",
-                threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            },
-            {
-                category: "HARM_CATEGORY_HATE_SPEECH",
-                threshold: "BLOCK_MEDIUM_AND_ABOVE"
-            }
-        ]
-    };
     
     try {
-        const response = await fetch(url, {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${GEMINI_KEY}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify(requestBody)
+            body: JSON.stringify({
+                contents: chatHistory,
+                generationConfig: {
+                    temperature: 0.9,
+                    topK: 1,
+                    topP: 1,
+                    maxOutputTokens: 2048,
+                }
+            })
         });
         
         if (!response.ok) {
@@ -231,20 +434,37 @@ async function getGeminiResponse(message) {
     }
 }
 
-// Helper functions
+// Helper Functions
 function addMessage(text, sender) {
     const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
+    messageDiv.className = `message ${sender}-message fade-in`;
+    
+    if (sender === 'friend') {
+        const avatarDiv = document.createElement('div');
+        avatarDiv.className = 'message-avatar';
+        avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName}">`;
+        messageDiv.appendChild(avatarDiv);
+    }
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = text;
+    
+    // Format text with emojis and line breaks
+    const formattedText = text.replace(/\n/g, '<br>');
+    contentDiv.innerHTML = formattedText;
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-time';
+    timeSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    contentDiv.appendChild(timeSpan);
     
     messageDiv.appendChild(contentDiv);
     chatMessages.appendChild(messageDiv);
     
     // Scroll to bottom
-    chatMessages.scrollTop = chatMessages.scrollHeight;
+    if (autoScroll) {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 }
 
 function showTypingIndicator() {
@@ -252,11 +472,20 @@ function showTypingIndicator() {
     indicator.className = 'message friend-message typing-indicator-container';
     indicator.id = 'typingIndicator';
     
+    const avatarDiv = document.createElement('div');
+    avatarDiv.className = 'message-avatar';
+    avatarDiv.innerHTML = `<img src="public/${selectedModel}.png" alt="${friendName}">`;
+    indicator.appendChild(avatarDiv);
+    
     const typingDiv = document.createElement('div');
     typingDiv.className = 'typing-indicator';
     typingDiv.innerHTML = '<span></span><span></span><span></span>';
     
-    indicator.appendChild(typingDiv);
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.appendChild(typingDiv);
+    
+    indicator.appendChild(contentDiv);
     chatMessages.appendChild(indicator);
     chatMessages.scrollTop = chatMessages.scrollHeight;
 }
@@ -268,38 +497,42 @@ function removeTypingIndicator() {
     }
 }
 
-function playVoice(type) {
-    if (!isVoiceOn) return;
+function toggleVoice() {
+    isVoiceOn = !isVoiceOn;
+    const icon = voiceToggle.querySelector('i');
+    icon.className = isVoiceOn ? 'fas fa-volume-up' : 'fas fa-volume-mute';
+    showNotification(`Voice ${isVoiceOn ? 'on' : 'off'}`, 'info');
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    const themes = ['dark', 'light', 'purple', 'ocean'];
+    const nextTheme = themes[(themes.indexOf(currentTheme) + 1) % themes.length];
+    document.documentElement.setAttribute('data-theme', nextTheme);
     
-    // Simple voice feedback
-    if (type === 'welcome') {
-        // Play welcome sound or use Web Speech API
-        speakText(`Welcome ${userName}!`);
-    } else if (type === 'friend-intro') {
-        speakText(`Hello! I'm ${friendName}`);
-    } else if (type === 'response') {
-        // Play a subtle notification sound
-        voiceAudio.currentTime = 0;
-        voiceAudio.play().catch(e => console.log('Audio play failed:', e));
+    const icon = themeToggle.querySelector('i');
+    icon.className = nextTheme === 'light' ? 'fas fa-sun' : 'fas fa-moon';
+}
+
+function clearChatHistory() {
+    if (confirm('Clear all messages?')) {
+        chatMessages.innerHTML = '';
+        chatHistory = [];
+        addMessage(`Hi ${userName}! I'm ${friendName}. Let's start fresh! How are you? 💫`, 'friend');
+        showNotification('Chat cleared!', 'info');
     }
 }
 
-// Web Speech API for text-to-speech
-function speakText(text) {
-    if (!isVoiceOn) return;
-    
-    if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(text);
-        utterance.rate = 1;
-        utterance.pitch = 1;
-        utterance.volume = 1;
-        window.speechSynthesis.cancel(); // Cancel any ongoing speech
-        window.speechSynthesis.speak(utterance);
+function rotateModel(degrees, reset = false) {
+    if (reset) {
+        currentRotation = 0;
+    } else {
+        currentRotation += degrees;
     }
+    floatingModel.style.transform = `rotateY(${currentRotation}deg)`;
 }
 
-// 3D floating effect enhancement
-floatingModel.addEventListener('mousemove', (e) => {
+function handleModelHover(e) {
     const rect = floatingModel.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -310,58 +543,90 @@ floatingModel.addEventListener('mousemove', (e) => {
     const rotateX = (y - centerY) / 20;
     const rotateY = (centerX - x) / 20;
     
-    floatingModel.style.transform = `rotateX(${rotateX}deg) rotateY(${rotateY}deg)`;
-});
+    floatingModel.style.transform = `rotateX(${rotateX}deg) rotateY(${currentRotation + rotateY}deg)`;
+}
 
-floatingModel.addEventListener('mouseleave', () => {
-    floatingModel.style.transform = 'rotateX(0) rotateY(0)';
-});
+function speakText(text) {
+    if (!isVoiceOn || !window.speechSynthesis) return;
+    
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = voiceSpeed;
+    utterance.volume = voiceVolume;
+    utterance.pitch = 1;
+    
+    // Get available voices and try to select a nice one
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(voice => voice.name.includes('Google') || voice.name.includes('Natural'));
+    if (preferredVoice) {
+        utterance.voice = preferredVoice;
+    }
+    
+    window.speechSynthesis.speak(utterance);
+}
 
-// Error message display
-function showErrorMessage(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'error-message';
-    errorDiv.style.cssText = `
+function initializeSpeechSynthesis() {
+    if (window.speechSynthesis) {
+        window.speechSynthesis.getVoices();
+    }
+}
+
+function playMessageSound() {
+    if (messageSound) {
+        messageSoundAudio.play().catch(() => {});
+    }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    notification.style.cssText = `
         position: fixed;
         top: 20px;
         right: 20px;
-        background: rgba(255, 68, 68, 0.9);
+        background: ${type === 'success' ? 'var(--success-color)' : type === 'error' ? 'var(--error-color)' : 'var(--primary-color)'};
         color: white;
-        padding: 16px 24px;
-        border-radius: 12px;
-        backdrop-filter: blur(10px);
+        padding: 12px 24px;
+        border-radius: 50px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
         z-index: 2000;
         animation: slideIn 0.3s ease;
+        box-shadow: var(--shadow-lg);
     `;
-    errorDiv.textContent = message;
-    document.body.appendChild(errorDiv);
+    
+    document.body.appendChild(notification);
     
     setTimeout(() => {
-        errorDiv.remove();
-    }, 5000);
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
-// Add animation styles dynamically
+function shakeElement(element) {
+    element.classList.add('shake');
+    setTimeout(() => element.classList.remove('shake'), 300);
+}
+
+// Add slideOut animation
 const style = document.createElement('style');
 style.textContent = `
-    @keyframes slideIn {
+    @keyframes slideOut {
         from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
             transform: translateX(0);
             opacity: 1;
         }
-    }
-    
-    .error-message {
-        box-shadow: 0 10px 30px rgba(255, 68, 68, 0.3);
-        border-left: 4px solid #ff4444;
-    }
-    
-    .typing-indicator-container {
-        background: transparent !important;
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
     }
 `;
 document.head.appendChild(style);
