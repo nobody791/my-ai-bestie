@@ -3,15 +3,12 @@ let appState = {
     userName: '',
     selectedModel: '',
     friendName: '',
-    geminiKeys: [],
-    currentKeyIndex: 0,
     isVoiceOn: true,
-    isImageGenerationOn: true,
     chatHistory: [],
     speechSynthesis: window.speechSynthesis,
-    companionMood: 'happy',
-    timeWithFriend: 0,
-    theme: 'dark'
+    recognition: null,
+    isRecognizing: false,
+    renderer: null // For 3D
 };
 
 // DOM Elements
@@ -19,13 +16,14 @@ let elements = {};
 
 // Initialize App
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('Chilling Companion initializing...');
+    console.log('App initializing...');
     
+    // Get all DOM elements
     initializeElements();
-    await loadConfig();
+    
     setupEventListeners();
+    setupSpeechRecognition();
     simulateLoading();
-    initializeTheme();
 });
 
 function initializeElements() {
@@ -38,7 +36,7 @@ function initializeElements() {
         startBtn: document.getElementById('startBtn'),
         greeting: document.getElementById('greeting'),
         modelImage: document.getElementById('modelImage'),
-        modelContainer: document.getElementById('modelContainer'),
+        threeContainer: document.getElementById('threeContainer'),
         selectionSection: document.getElementById('selectionSection'),
         selectBtns: document.querySelectorAll('.select-btn'),
         namingSection: document.getElementById('namingSection'),
@@ -51,46 +49,17 @@ function initializeElements() {
         messageInput: document.getElementById('messageInput'),
         sendBtn: document.getElementById('sendBtn'),
         voiceToggleBtn: document.getElementById('voiceToggleBtn'),
-        imageToggleBtn: document.getElementById('imageToggleBtn'),
-        themeToggle: document.getElementById('themeToggle'),
-        moodIndicator: document.getElementById('moodIndicator'),
-        timeWithFriend: document.getElementById('timeWithFriend'),
-        imageModal: document.getElementById('imageModal'),
-        generatedImage: document.getElementById('generatedImage'),
-        saveImageBtn: document.getElementById('saveImageBtn'),
-        shareImageBtn: document.getElementById('shareImageBtn'),
-        emojiBtn: document.getElementById('emojiBtn'),
-        typingStatus: document.getElementById('typingStatus')
+        micBtn: document.getElementById('micBtn'),
+        funModeBtn: document.getElementById('funModeBtn')
     };
     
     console.log('Elements initialized:', Object.keys(elements).length);
 }
 
-async function loadConfig() {
-    try {
-        const response = await fetch('/api/config');
-        const config = await response.json();
-        appState.hasGeminiKeys = config.hasGeminiKeys;
-        console.log('Config loaded:', config);
-    } catch (error) {
-        console.log('Using offline mode');
-    }
-}
-
 function simulateLoading() {
-    const quotes = [
-        "Creating your perfect companion...",
-        "Almost there...",
-        "Adding personality...",
-        "Making it special..."
-    ];
-    
-    const quoteElement = document.querySelector('.loading-quote');
     let progress = 0;
-    
     const interval = setInterval(() => {
-        progress += Math.random() * 15;
-        
+        progress += Math.random() * 10;
         if (progress >= 100) {
             progress = 100;
             clearInterval(interval);
@@ -102,19 +71,7 @@ function simulateLoading() {
                 }, 500);
             }, 500);
         }
-        
         elements.progressBar.style.width = progress + '%';
-        
-        // Update quote based on progress
-        if (progress < 25) {
-            quoteElement.textContent = quotes[0];
-        } else if (progress < 50) {
-            quoteElement.textContent = quotes[1];
-        } else if (progress < 75) {
-            quoteElement.textContent = quotes[2];
-        } else {
-            quoteElement.textContent = quotes[3];
-        }
     }, 200);
 }
 
@@ -130,16 +87,6 @@ function setupEventListeners() {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
             selectFriend(e.target.dataset.model);
-        });
-    });
-    
-    // Friend card click
-    document.querySelectorAll('.friend-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if (!e.target.classList.contains('select-btn')) {
-                const model = card.dataset.model;
-                selectFriend(model);
-            }
         });
     });
     
@@ -159,36 +106,16 @@ function setupEventListeners() {
     });
     
     // Voice toggle
-    if (elements.voiceToggleBtn) {
-        elements.voiceToggleBtn.addEventListener('click', toggleVoice);
-    }
+    elements.voiceToggleBtn.addEventListener('click', toggleVoice);
     
-    // Image toggle
-    if (elements.imageToggleBtn) {
-        elements.imageToggleBtn.addEventListener('click', toggleImageGeneration);
-    }
+    // Mic
+    elements.micBtn.addEventListener('click', toggleSpeechRecognition);
     
-    // Theme toggle
-    if (elements.themeToggle) {
-        elements.themeToggle.addEventListener('click', toggleTheme);
-    }
+    // Fun mode
+    elements.funModeBtn.addEventListener('click', triggerFunMode);
     
     // Auto-resize textarea
     elements.messageInput.addEventListener('input', autoResizeTextarea);
-    
-    // Close modal
-    document.querySelector('.close-modal')?.addEventListener('click', () => {
-        elements.imageModal.classList.remove('active');
-    });
-    
-    // Save image
-    elements.saveImageBtn?.addEventListener('click', saveGeneratedImage);
-    
-    // Share image
-    elements.shareImageBtn?.addEventListener('click', shareGeneratedImage);
-    
-    // Emoji picker (simple version)
-    elements.emojiBtn?.addEventListener('click', showEmojiPicker);
 }
 
 function startJourney() {
@@ -199,33 +126,25 @@ function startJourney() {
     }
     
     appState.userName = name;
-    elements.greeting.textContent = `Welcome back, ${name}`;
+    elements.greeting.textContent = `Welcome, ${name}!`;
     
     elements.welcomeModal.classList.remove('active');
     elements.mainApp.classList.remove('hidden');
     
-    showNotification(`Nice to meet you, ${name}! ✨`, 'success');
+    showNotification(`Nice to meet you, ${name}!`, 'success');
 }
 
 function selectFriend(model) {
     appState.selectedModel = model;
     
-    // Update model image (for non-3D models)
-    if (model !== 'model4') {
-        elements.modelImage.src = `public/${model}.png`;
-        elements.modelImage.style.display = 'block';
-        // Hide canvas if visible
-        const canvas = document.getElementById('model3dCanvas');
-        if (canvas) canvas.style.display = 'none';
+    if (model === 'model4') {
+        elements.modelImage.classList.add('hidden');
+        elements.threeContainer.classList.remove('hidden');
+        init3D();
     } else {
-        // Show 3D model
-        elements.modelImage.style.display = 'none';
-        const canvas = document.getElementById('model3dCanvas');
-        if (canvas) {
-            canvas.style.display = 'block';
-            canvas.width = 300;
-            canvas.height = 300;
-        }
+        elements.modelImage.src = `public/${model}.png`;
+        elements.modelImage.classList.remove('hidden');
+        elements.threeContainer.classList.add('hidden');
     }
     
     // Show naming section
@@ -239,18 +158,19 @@ function selectFriend(model) {
 function nameFriend() {
     const name = elements.friendNameInput.value.trim();
     if (!name) {
-        showNotification('Please name your companion', 'error');
+        showNotification('Please name your friend', 'error');
         return;
     }
     
     appState.friendName = name;
     
     // Update chat UI
-    if (appState.selectedModel !== 'model4') {
-        elements.chatFriendImage.src = `public/${appState.selectedModel}.png`;
+    if (appState.selectedModel === 'model4') {
+        setTimeout(() => {
+            elements.chatFriendImage.src = appState.renderer.domElement.toDataURL('image/png');
+        }, 500); // Wait for render
     } else {
-        // For 3D model, use a generated avatar or keep the canvas
-        elements.chatFriendImage.src = 'public/model3.png'; // Fallback
+        elements.chatFriendImage.src = `public/${appState.selectedModel}.png`;
     }
     elements.chatFriendNameDisplay.textContent = name;
     
@@ -258,56 +178,35 @@ function nameFriend() {
     elements.namingSection.classList.add('hidden');
     elements.chatSection.classList.remove('hidden');
     
-    // Start time counter
-    startTimeCounter();
-    
-    // Welcome message with personality
-    const personalities = {
-        model1: "wise and caring",
-        model2: "energetic and fun",
-        model3: "creative and artistic",
-        model4: "mystical and interactive"
-    };
-    
-    const personality = personalities[appState.selectedModel] || "wonderful";
-    const welcomeMsg = `Hi ${appState.userName}! I'm ${name}, your ${personality} companion! I'm so happy to meet you! How are you feeling today? 🌟`;
-    
-    addMessage(welcomeMsg, 'friend');
-    
-    // Initialize chat history with context
-    appState.chatHistory = [
-        {
-            role: "user",
-            parts: [{ text: `You are ${name}, a ${personality} AI companion. The user's name is ${appState.userName}. Be warm, friendly, and engaging. You can generate images when users ask for them using the waifu.im API. Be creative and fun!` }]
-        },
-        {
-            role: "model",
-            parts: [{ text: welcomeMsg }]
-        }
-    ];
-    
-    // Voice welcome
-    if (appState.isVoiceOn) {
-        speakText(`Hello! I'm ${name}`);
+    // Load chat history if exists
+    const storedHistory = localStorage.getItem(`chat_${name}`);
+    if (storedHistory) {
+        appState.chatHistory = JSON.parse(storedHistory);
+        appState.chatHistory.forEach(msg => {
+            if (msg.role === 'user') addMessage(msg.parts[0].text, 'user');
+            else addMessage(msg.parts[0].text, 'friend');
+        });
+    } else {
+        // Welcome message
+        const welcomeMsg = `Hi ${appState.userName}! I'm ${name}, your chilling companion! How can I help you today? 😊`;
+        addMessage(welcomeMsg, 'friend');
+        
+        appState.chatHistory = [
+            {
+                role: "user",
+                parts: [{ text: `You are ${name}, a friendly chilling companion. The user's name is ${appState.userName}. Be warm and friendly. If the user asks to show or send an image, reply exactly with [IMAGE: list of tags for the image, comma separated, e.g. waifu,uniform]. Choose tags from waifu.im API, and randomly decide to include NSFW tags like ecchi,hentai or SFW like maid,marin-kitagawa. Do not add any other text. Else, respond normally with fun emojis where appropriate.` }]
+            },
+            {
+                role: "model",
+                parts: [{ text: welcomeMsg }]
+            }
+        ];
     }
     
-    showNotification(`${name} is now your companion! 🎉`, 'success');
-}
-
-function startTimeCounter() {
-    setInterval(() => {
-        appState.timeWithFriend++;
-        const minutes = Math.floor(appState.timeWithFriend / 60);
-        const seconds = appState.timeWithFriend % 60;
-        
-        if (elements.timeWithFriend) {
-            if (minutes > 0) {
-                elements.timeWithFriend.textContent = `${minutes}m ${seconds}s`;
-            } else {
-                elements.timeWithFriend.textContent = `${seconds}s`;
-            }
-        }
-    }, 1000);
+    // Voice welcome
+    speakText(`Hello! I'm ${name}`);
+    
+    showNotification(`${name} is now your friend! 🎉`, 'success');
 }
 
 async function sendMessage() {
@@ -321,243 +220,81 @@ async function sendMessage() {
     // Add user message
     addMessage(message, 'user');
     
-    // Check for image requests
-    if (appState.isImageGenerationOn && isImageRequest(message)) {
-        showTypingIndicator();
-        await handleImageRequest(message);
-        removeTypingIndicator();
-        return;
-    }
-    
     // Add to history
     appState.chatHistory.push({
         role: "user",
         parts: [{ text: message }]
     });
     
+    saveChatHistory();
+    
     // Show typing
     showTypingIndicator();
-    if (elements.typingStatus) {
-        elements.typingStatus.classList.remove('hidden');
-    }
     
     try {
-        const response = await getAIResponse(message);
+        const response = await getAIResponse();
         removeTypingIndicator();
-        if (elements.typingStatus) {
-            elements.typingStatus.classList.add('hidden');
+        
+        if (response.startsWith('[IMAGE:') && response.endsWith(']')) {
+            const tagsStr = response.slice(8, -1);
+            const tags = tagsStr.split(',').map(t => t.trim());
+            const imgUrl = await fetchWaifuImage(tags);
+            addImageMessage(imgUrl, 'friend');
+        } else {
+            addMessage(response, 'friend');
+            if (appState.isVoiceOn) {
+                speakText(response);
+            }
         }
-        addMessage(response, 'friend');
         
         appState.chatHistory.push({
             role: "model",
             parts: [{ text: response }]
         });
-        
-        if (appState.isVoiceOn) {
-            speakText(response);
-        }
-        
-        // Update mood based on conversation
-        updateMood(response);
+        saveChatHistory();
     } catch (error) {
         removeTypingIndicator();
-        if (elements.typingStatus) {
-            elements.typingStatus.classList.add('hidden');
-        }
         const fallback = getFallbackResponse();
         addMessage(fallback, 'friend');
     }
 }
 
-function isImageRequest(message) {
-    const keywords = ['image', 'picture', 'photo', 'show me', 'generate', 'create', 'draw', 'waifu', 'anime'];
-    return keywords.some(keyword => message.toLowerCase().includes(keyword));
-}
-
-async function handleImageRequest(message) {
+async function getAIResponse() {
     try {
-        // Determine if NSFW based on context
-        const isNSFW = message.toLowerCase().includes('nsfw') || 
-                       message.toLowerCase().includes('spicy') ||
-                       message.toLowerCase().includes('mature');
-        
-        // Determine tags from message
-        const tags = extractTags(message);
-        
-        const response = await fetch('/api/generate-image', {
+        const res = await fetch('/api/generate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tags, isNSFW })
+            body: JSON.stringify({ contents: appState.chatHistory })
         });
-        
-        const data = await response.json();
-        
-        if (data.url) {
-            // Add image message
-            addImageMessage(data.url, 'friend');
-            
-            // Add to chat history
-            appState.chatHistory.push({
-                role: "model",
-                parts: [{ text: `Here's an image for you!` }]
-            });
-        } else {
-            addMessage("I couldn't generate an image right now. Let's try something else!", 'friend');
-        }
-    } catch (error) {
-        console.error('Image generation error:', error);
-        addMessage("I'm having trouble generating images right now. Let's chat instead!", 'friend');
+        const data = await res.json();
+        if (data.error) throw new Error();
+        return data.text;
+    } catch {
+        return getFallbackResponse();
     }
 }
 
-function extractTags(message) {
-    const tagKeywords = {
-        'waifu': ['waifu', 'girl', 'anime'],
-        'maid': ['maid'],
-        'neko': ['cat', 'neko', 'kitten'],
-        'selfie': ['selfie', 'self'],
-        'uniform': ['uniform', 'school'],
-        'gaming': ['game', 'gaming', 'gamer']
-    };
-    
-    for (const [tag, keywords] of Object.entries(tagKeywords)) {
-        if (keywords.some(keyword => message.toLowerCase().includes(keyword))) {
-            return [tag];
-        }
-    }
-    
-    return ['waifu']; // Default
-}
-
-function addImageMessage(url, sender) {
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `message ${sender}-message`;
-    
-    const contentDiv = document.createElement('div');
-    contentDiv.className = 'message-content';
-    
-    const img = document.createElement('img');
-    img.src = url;
-    img.className = 'message-image';
-    img.onclick = () => showImageModal(url);
-    
-    const timeSpan = document.createElement('span');
-    timeSpan.className = 'message-time';
-    timeSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    contentDiv.appendChild(img);
-    contentDiv.appendChild(timeSpan);
-    messageDiv.appendChild(contentDiv);
-    elements.chatMessages.appendChild(messageDiv);
-    
-    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
-}
-
-function showImageModal(url) {
-    elements.generatedImage.src = url;
-    elements.imageModal.classList.add('active');
-}
-
-function saveGeneratedImage() {
-    const link = document.createElement('a');
-    link.download = 'companion-image.jpg';
-    link.href = elements.generatedImage.src;
-    link.click();
-    showNotification('Image saved!', 'success');
-}
-
-function shareGeneratedImage() {
-    if (navigator.share) {
-        navigator.share({
-            title: 'AI Companion Image',
-            text: 'Check out this image from my AI Companion!',
-            url: elements.generatedImage.src
-        });
-    } else {
-        navigator.clipboard.writeText(elements.generatedImage.src);
-        showNotification('Image URL copied to clipboard!', 'success');
-    }
-}
-
-function showEmojiPicker() {
-    // Simple emoji picker (can be expanded)
-    const emojis = ['😊', '😂', '🥰', '😍', '🤔', '😴', '🎉', '✨', '🌟', '💫'];
-    const randomEmoji = emojis[Math.floor(Math.random() * emojis.length)];
-    elements.messageInput.value += randomEmoji;
-    elements.messageInput.focus();
-}
-
-async function getAIResponse(message) {
+async function fetchWaifuImage(tags) {
     try {
-        // Try to get a Gemini key
-        const keyResponse = await fetch('/api/gemini-key');
-        const keyData = await keyResponse.json();
-        
-        if (!keyData.key) {
-            return getFallbackResponse();
-        }
-        
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${keyData.key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: appState.chatHistory,
-                generationConfig: {
-                    temperature: 0.8,
-                    maxOutputTokens: 500,
-                }
-            })
-        });
-        
-        const data = await response.json();
-        return data.candidates?.[0]?.content?.parts?.[0]?.text || getFallbackResponse();
-    } catch (error) {
-        console.error('AI Error:', error);
-        
-        // Try using server proxy as fallback
-        try {
-            const proxyResponse = await fetch('/api/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ messages: appState.chatHistory })
-            });
-            
-            const data = await proxyResponse.json();
-            return data.candidates?.[0]?.content?.parts?.[0]?.text || getFallbackResponse();
-        } catch (proxyError) {
-            return getFallbackResponse();
-        }
+        let url = 'https://api.waifu.im/search?';
+        tags.forEach(tag => url += `tags=${tag}&`);
+        const res = await fetch(url);
+        const data = await res.json();
+        return data.images[0].url;
+    } catch {
+        return ''; // Fallback empty
     }
 }
 
 function getFallbackResponse() {
     const responses = [
-        "That's so interesting! Tell me more about that! 😊",
-        "I love how you think! What else is on your mind? 💭",
-        "You're amazing, you know that? Let's keep chatting! 🌟",
-        "I'm here for you! What would you like to explore today? 💫",
-        "That's great! How does that make you feel? 🎯",
-        "You make my day better just by talking to me! ✨",
-        "I'm curious to hear more about that! 🧐",
-        "That's fascinating! Tell me everything! 🎉"
+        "That's interesting! Tell me more! 😊",
+        "I love hearing that! What else is on your mind? 💭",
+        "You're amazing! Let's chat more! 🌟",
+        "I'm here for you! What would you like to talk about? 💫",
+        "That's great! How does that make you feel? 🎯"
     ];
     return responses[Math.floor(Math.random() * responses.length)];
-}
-
-function updateMood(response) {
-    // Simple mood detection based on response content
-    if (response.includes('❤️') || response.includes('love') || response.includes('happy')) {
-        appState.companionMood = 'happy';
-    } else if (response.includes('😢') || response.includes('sad')) {
-        appState.companionMood = 'caring';
-    } else if (response.includes('🎉') || response.includes('excited')) {
-        appState.companionMood = 'excited';
-    }
-    
-    if (elements.moodIndicator) {
-        elements.moodIndicator.textContent = appState.companionMood.charAt(0).toUpperCase() + appState.companionMood.slice(1);
-    }
 }
 
 function addMessage(text, sender) {
@@ -566,17 +303,43 @@ function addMessage(text, sender) {
     
     const contentDiv = document.createElement('div');
     contentDiv.className = 'message-content';
-    contentDiv.textContent = text;
+    contentDiv.innerHTML = text; // Support emojis
     
     const timeSpan = document.createElement('span');
     timeSpan.className = 'message-time';
     timeSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
     contentDiv.appendChild(timeSpan);
+    
     messageDiv.appendChild(contentDiv);
     elements.chatMessages.appendChild(messageDiv);
     
     // Scroll to bottom
+    elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+}
+
+function addImageMessage(url, sender) {
+    if (!url) return addMessage('Sorry, couldn\'t load image.', 'friend');
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${sender}-message`;
+    
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.maxWidth = '100%';
+    img.style.borderRadius = '10px';
+    contentDiv.appendChild(img);
+    
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'message-time';
+    timeSpan.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    contentDiv.appendChild(timeSpan);
+    
+    messageDiv.appendChild(contentDiv);
+    elements.chatMessages.appendChild(messageDiv);
+    
     elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
 }
 
@@ -606,39 +369,6 @@ function toggleVoice() {
     showNotification(`Voice ${appState.isVoiceOn ? 'on' : 'off'}`, 'info');
 }
 
-function toggleImageGeneration() {
-    appState.isImageGenerationOn = !appState.isImageGenerationOn;
-    const icon = elements.imageToggleBtn.querySelector('i');
-    icon.className = appState.isImageGenerationOn ? 'fas fa-image' : 'fas fa-image';
-    icon.style.opacity = appState.isImageGenerationOn ? '1' : '0.5';
-    showNotification(`Image generation ${appState.isImageGenerationOn ? 'enabled' : 'disabled'}`, 'info');
-}
-
-function toggleTheme() {
-    appState.theme = appState.theme === 'dark' ? 'light' : 'dark';
-    const icon = elements.themeToggle.querySelector('i');
-    
-    if (appState.theme === 'light') {
-        document.documentElement.style.setProperty('--dark', '#ffffff');
-        document.documentElement.style.setProperty('--darker', '#f8fafc');
-        document.documentElement.style.setProperty('--light', '#0f172a');
-        document.documentElement.style.setProperty('--gray', '#64748b');
-        icon.className = 'fas fa-sun';
-    } else {
-        document.documentElement.style.setProperty('--dark', '#0f172a');
-        document.documentElement.style.setProperty('--darker', '#0b0f1a');
-        document.documentElement.style.setProperty('--light', '#ffffff');
-        document.documentElement.style.setProperty('--gray', '#94a3b8');
-        icon.className = 'fas fa-moon';
-    }
-}
-
-function initializeTheme() {
-    // Set initial theme
-    const icon = elements.themeToggle?.querySelector('i');
-    if (icon) icon.className = 'fas fa-moon';
-}
-
 function speakText(text) {
     if (!appState.isVoiceOn || !window.speechSynthesis) return;
     
@@ -647,15 +377,51 @@ function speakText(text) {
     utterance.rate = 1;
     utterance.pitch = 1;
     utterance.volume = 1;
-    
-    // Try to get a female voice
-    const voices = window.speechSynthesis.getVoices();
-    const femaleVoice = voices.find(voice => voice.name.includes('Female') || voice.name.includes('Google UK') || voice.name.includes('Samantha'));
-    if (femaleVoice) {
-        utterance.voice = femaleVoice;
-    }
-    
     window.speechSynthesis.speak(utterance);
+}
+
+function setupSpeechRecognition() {
+    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
+        appState.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        appState.recognition.continuous = false;
+        appState.recognition.interimResults = false;
+        appState.recognition.onresult = (event) => {
+            elements.messageInput.value = event.results[0][0].transcript;
+        };
+        appState.recognition.onend = () => {
+            appState.isRecognizing = false;
+            elements.micBtn.querySelector('i').className = 'fas fa-microphone';
+        };
+        appState.recognition.onerror = () => {
+            showNotification('Speech recognition error', 'error');
+            appState.isRecognizing = false;
+            elements.micBtn.querySelector('i').className = 'fas fa-microphone';
+        };
+    }
+}
+
+function toggleSpeechRecognition() {
+    if (!appState.recognition) return showNotification('Speech recognition not supported', 'error');
+    
+    if (appState.isRecognizing) {
+        appState.recognition.stop();
+    } else {
+        appState.recognition.start();
+        appState.isRecognizing = true;
+        elements.micBtn.querySelector('i').className = 'fas fa-microphone-alt';
+    }
+}
+
+function triggerFunMode() {
+    const funPrompts = [
+        'Tell me a funny joke!',
+        'Let\'s play a quick text game. You start!',
+        'Share a random fun fact!',
+        'Recommend a chill activity!'
+    ];
+    const prompt = funPrompts[Math.floor(Math.random() * funPrompts.length)];
+    elements.messageInput.value = prompt;
+    sendMessage();
 }
 
 function autoResizeTextarea() {
@@ -667,11 +433,15 @@ function resetTextareaHeight() {
     elements.messageInput.style.height = 'auto';
 }
 
+function saveChatHistory() {
+    localStorage.setItem(`chat_${appState.friendName}`, JSON.stringify(appState.chatHistory));
+}
+
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
-    notification.style.background = type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#8b5cf6';
+    notification.style.background = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6366f1';
     
     document.body.appendChild(notification);
     
@@ -679,4 +449,106 @@ function showNotification(message, type = 'info') {
         notification.style.animation = 'slideIn 0.3s reverse';
         setTimeout(() => notification.remove(), 300);
     }, 3000);
+}
+
+function init3D() {
+    const container = elements.threeContainer;
+    const scene = new THREE.Scene();
+    scene.background = null; // Transparent
+
+    const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+    appState.renderer = renderer;
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0xffffff, 0.5);
+    scene.add(ambient);
+    const directional = new THREE.DirectionalLight(0xffffff, 1);
+    directional.position.set(5, 5, 5);
+    scene.add(directional);
+
+    // Model group
+    const modelGroup = new THREE.Group();
+    scene.add(modelGroup);
+
+    // Head
+    const headGeo = new THREE.SphereGeometry(1, 32, 32);
+    const headMat = new THREE.MeshPhongMaterial({ color: 0xffdbac }); // Skin
+    const head = new THREE.Mesh(headGeo, headMat);
+    modelGroup.add(head);
+
+    // Eyes
+    const eyeGeo = new THREE.SphereGeometry(0.1, 32, 32);
+    const eyeMat = new THREE.MeshPhongMaterial({ color: 0x000000 });
+    const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
+    leftEye.position.set(-0.3, 0.3, 0.9);
+    head.add(leftEye);
+    const rightEye = leftEye.clone();
+    rightEye.position.x = 0.3;
+    head.add(rightEye);
+
+    // Hair (multiple strands for beauty)
+    const hairMat = new THREE.MeshPhongMaterial({ color: 0x663300 }); // Brown hair
+    for (let i = 0; i < 5; i++) {
+        const hairGeo = new THREE.CylinderGeometry(0.05, 0.05, 2 + Math.random(), 32);
+        const hair = new THREE.Mesh(hairGeo, hairMat);
+        hair.position.set(Math.sin(i) * 0.5, 0.5 + Math.random() * 0.5, -0.5 + Math.cos(i) * 0.5);
+        hair.rotation.z = Math.random() * Math.PI / 4;
+        head.add(hair);
+    }
+
+    // Body (dress)
+    const bodyGeo = new THREE.CylinderGeometry(0.8, 0.6, 2, 32);
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0xff69b4 }); // Pink dress
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = -2;
+    modelGroup.add(body);
+
+    // Skirt
+    const skirtGeo = new THREE.ConeGeometry(1.2, 1.5, 32);
+    const skirtMat = new THREE.MeshPhongMaterial({ color: 0xff69b4 });
+    const skirt = new THREE.Mesh(skirtGeo, skirtMat);
+    skirt.position.y = -3.5;
+    modelGroup.add(skirt);
+
+    // Arms
+    const armGeo = new THREE.CylinderGeometry(0.2, 0.2, 1.5, 32);
+    const armMat = new THREE.MeshPhongMaterial({ color: 0xffdbac });
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.set(-1, -1.5, 0);
+    leftArm.rotation.z = Math.PI / 4;
+    modelGroup.add(leftArm);
+    const rightArm = leftArm.clone();
+    rightArm.position.x = 1;
+    rightArm.rotation.z = -Math.PI / 4;
+    modelGroup.add(rightArm);
+
+    // Legs
+    const legGeo = new THREE.CylinderGeometry(0.3, 0.2, 2, 32);
+    const legMat = new THREE.MeshPhongMaterial({ color: 0x000000 }); // Black leggings
+    const leftLeg = new THREE.Mesh(legGeo, legMat);
+    leftLeg.position.set(-0.4, -4, 0);
+    modelGroup.add(leftLeg);
+    const rightLeg = leftLeg.clone();
+    rightLeg.position.x = 0.4;
+    modelGroup.add(rightLeg);
+
+    camera.position.z = 6;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        modelGroup.rotation.y += 0.005;
+        modelGroup.position.y = Math.sin(Date.now() / 1000) * 0.2;
+        renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize handler
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
 }
